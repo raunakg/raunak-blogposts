@@ -1,0 +1,126 @@
+---
+title: 'Building an Activity Timer in Angular with RxJS'
+date: '2024-04-29'
+tags: ['Angular']
+draft: false
+description: 'Learn how to implement an activity timer in Angular using RxJS. By tracking mouse movements and keyboard presses, the activity timer can detect when a user becomes inactive and trigger actions accordingly, such as displaying a warning or logging the user out. Enhance your Angular applications with this simple yet powerful feature to improve user engagement and application security.'
+---
+
+In modern web applications, it's essential to keep track of user activity to provide a better user experience and ensure security. One common requirement is to detect when a user becomes inactive for a certain period and perform actions accordingly, such as displaying a warning or logging the user out. In this blog post, we'll explore how to implement an activity timer in Angular using RxJS.
+
+### Introduction to Activity Timer
+
+An activity timer tracks user interactions, such as mouse movements and keyboard presses, to determine whether the user is actively engaged with the application. If the user remains inactive for a specified period, typically a few minutes, the timer triggers an action, such as displaying a popup or logging the user out.
+
+### Setting Up the Angular Project
+
+Before we dive into the implementation, let's set up a new Angular project using the Angular CLI:
+
+```bash
+ng new activity-timer-app
+cd activity-timer-app
+```
+
+### Implementing the Activity Timer Service
+
+We'll start by creating a service to manage the activity timer logic. This service will use RxJS observables to track user activity and trigger actions when the user becomes inactive.
+
+```ts
+// activity-timer.service.ts
+
+import { Injectable } from '@angular/core';
+import { fromEvent, merge, BehaviorSubject } from 'rxjs';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class ActivityTimerService {
+  private userActivityTimeout = 300000
+  private userActivity: any;
+  activity$ = new BehaviorSubject<boolean>(false);
+
+  constructor() {
+    this.setUserTimeout();
+    this.handleActivity()
+  }
+
+  handleActivity(){
+    const mouseMove = fromEvent(document, 'mousemove');
+    const keyDown = fromEvent(document, 'keydown');
+    merge(mouseMove, keyDown).subscribe(()=>{
+      clearTimeout(this.userActivity);
+      this.activity$.next(true);
+      this.setUserTimeout()
+    });
+  }
+
+  setUserTimeout() {
+    this.userActivity = setTimeout(
+      () => this.activity$.next(false),
+      this.userActivityTimeout
+    )
+  }
+
+  getUserActivity(){
+    return this.activity$.getValue()
+  }
+
+}
+
+```
+
+In this service:
+
+- We use a `BehaviorSubject<boolean>` named `activity$` to track the user's activity state.
+- The `setUserTimeout()` method initializes the timer by subscribing to mousemove and keydown events using RxJS fromEvent.
+- When user activity is detected, the `handleActivity()` method clears the existing timeout and resets the timer using `setUserTimeout()`.
+- The `setUserTimeout()` method sets up a new timeout to trigger an action after 5 minutes of inactivity.
+
+### Using the Activity Timer Service in Components
+
+Now, let's see how to use the ActivityTimerService in Angular components to react to user activity.
+
+```ts
+// app.component.ts
+
+import { Component, OnInit } from '@angular/core';
+import { ActivityTimerService } from './activity-timer.service';
+
+@Component({
+  selector: 'app-root',
+  templateUrl: './app.component.html',
+  styleUrls: ['./app.component.css']
+})
+export class AppComponent implements OnInit {
+  constructor(private activityTimerService: ActivityTimerService) {}
+
+  ngOnInit() {
+    this.activityTimerService.activity$.subscribe((isActive) => {
+      if (isActive) {
+        console.log('User is active');
+      } else {
+        console.log('User is inactive');
+      }
+    });
+  }
+}
+
+```
+
+In the component:
+
+- We inject the ActivityTimerService into the constructor.
+- We subscribe to the activity$ observable to receive updates about the user's activity state.
+- Depending on whether the user is active or inactive, we can perform different actions, such as logging messages or displaying popups.
+
+### Conclusion
+
+In this blog post, we've explored how to implement an activity timer in Angular using RxJS. By tracking user activity and reacting to inactivity, we can enhance the user experience and improve application security. The activity timer is a powerful tool for web developers to create more responsive and engaging web applications.
+
+To summarize:
+
+- We created an ActivityTimerService to manage the activity timer logic.
+- We used RxJS observables to track user activity and trigger actions when the user becomes inactive.
+- We demonstrated how to use the ActivityTimerService in Angular components to react to user activity changes.
+
+Implementing an activity timer in your Angular application can help you better understand user behavior and tailor your application's response accordingly. Experiment with different timeout durations and actions to find the right balance between user engagement and security.
